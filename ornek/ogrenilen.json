@@ -1,0 +1,149 @@
+{
+ "surum": 1,
+ "not": "Müşteri kodu -> UVP kodu ve onaylı uç kararları. Yalnız adı geçen ürüne uygulanır. Tel kararı yalnız kendi işinde geçerlidir.",
+ "urun_kodu": [
+  {
+   "p8_kod": "FRIZ.FZGQ500X65-33",
+   "uvp_kod": "FRI.FZGQ500X65-33",
+   "kaynak": "26SB003 iş emri listesi, kullanıcı",
+   "tarih": "2026-11-05"
+  },
+  {
+   "p8_kod": "FRIZ.GWADQ420X80-75",
+   "uvp_kod": "FRI.GWADQ420X80-75",
+   "kaynak": "26SB003 iş emri listesi, kullanıcı",
+   "tarih": "2026-11-05"
+  },
+  {
+   "p8_kod": "SIG.2070173",
+   "uvp_kod": "SIGNODE.2070173",
+   "varyant": "2",
+   "sart_ayni_cihazda": "FRIZ.GWADQ420X80-75",
+   "kaynak": "26SB003 varyant 2 = 2xGWADQ, kullanıcı",
+   "tarih": "2026-11-05"
+  },
+  {
+   "p8_kod": "SIG.2080070",
+   "uvp_kod": "HAE.GCU2600/2800",
+   "kaynak": "26SB003 iş emri listesi, kullanıcı",
+   "tarih": "2026-11-05"
+  },
+  {
+   "p8_kod": "CONRAD.531431-62",
+   "uvp_kod": "CON.531431 - 62",
+   "kaynak": "26SB003 iş emri listesi, kullanıcı",
+   "tarih": "2026-11-05"
+  },
+  {
+   "p8_kod": "WD.Flexy205",
+   "uvp_kod": "EWON.Flexy205",
+   "kaynak": "26SB003 iş emri listesi, kullanıcı",
+   "tarih": "2026-11-05"
+  },
+  {
+   "p8_kod": "BRE.N20200396",
+   "uvp_kod": "BRE.BE1600 UL-CSA",
+   "kaynak": "26SB003 iş emri listesi, kullanıcı",
+   "tarih": "2026-11-05"
+  },
+  {
+   "p8_kod": "RS.36MB80A",
+   "uvp_kod": "VIS.36MB80A",
+   "kaynak": "26SB003 iş emri listesi, kullanıcı",
+   "tarih": "2026-11-05"
+  }
+ ],
+ "uc": [
+  {
+   "urun": "SIE.3LD3354-0TK51",
+   "karar": "ESLE",
+   "esleme": {
+    "L1": "1/L1",
+    "T1": "2/T1",
+    "L2": "3/L2",
+    "T2": "4/T2",
+    "L3": "5/L3",
+    "T3": "6/T3"
+   },
+   "kaynak": "26SB003 PDF s.24 kutup çiftleri + UVP makro uçları",
+   "tarih": "2026-11-05"
+  },
+  {
+   "urun": "WEI.1478190000",
+   "karar": "ESLE",
+   "esleme": {
+    "+": [
+     "+a",
+     "+b"
+    ],
+    "-": [
+     "-a",
+     "-b",
+     "-c"
+    ]
+   },
+   "kaynak": "26SB003 soldan sağa sıra + UVP şablon uçları",
+   "tarih": "2026-11-05"
+  },
+  {
+   "urun": "WEI.1478200000",
+   "karar": "ESLE",
+   "esleme": {
+    "+": [
+     "+a",
+     "+b"
+    ],
+    "-": [
+     "-a",
+     "-b",
+     "-c"
+    ]
+   },
+   "kaynak": "26SB003 soldan sağa sıra + UVP şablon uçları",
+   "tarih": "2026-11-05"
+  }
+ ],
+ "tel": [
+  {
+   "is": "26SB003",
+   "bag_deseni": "15RA7-",
+   "karar": "HARIC",
+   "kaynak": "PDF s.95: direnç ünitesinin kendi uçları, pano teli değil",
+   "tarih": "2026-11-05"
+  },
+  {
+   "is": "26SB003",
+   "bag_deseni": "-12RA0",
+   "karar": "YAZ",
+   "kesit": "1,5",
+   "renk": "RD",
+   "kaynak": "PDF s.56: -12FC1 B10 (10 A) 120 VAC devresi, UVP akım tablosu",
+   "tarih": "2026-11-05"
+  }
+ ],
+ "uc_sorumlu_degil": [
+  {
+   "urun": "SIE.3RT2016-2BB42",
+   "kaynak": "26SB003: fark yardımcı bloğa ait (53 54 ...), kontaktör gövdesi satırı turuncu olmaz",
+   "tarih": "2026-11-05"
+  },
+  {
+   "urun": "SIE.6SL3260-2DC10-0AA0",
+   "kaynak": "26SB003: fark sürücüye ait (L+), AC fişi satırı turuncu olmaz",
+   "tarih": "2026-11-05"
+  },
+  {
+   "urun": "SIGNODE.2070173",
+   "kaynak": "26SB003: tutucu; fark dirence ait, tutucu satırı turuncu olmaz",
+   "tarih": "2026-11-05"
+  }
+ ],
+ "tel_kodlari": [
+  {
+   "tip": "DBU-6-H07V-K",
+   "kod": "4520144",
+   "kaynak": "kullanıcı, 26SB003/26SB002 05.11",
+   "tarih": "2026-11-05"
+  }
+ ]
+}

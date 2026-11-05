@@ -1,0 +1,32 @@
+{
+ "musteri": "signode",
+ "not": "Müşteriye özel desenler. Depoya girmez.",
+ "kablo_deseni": "-(\\d+W[DG]|W[DG]\\d)",
+ "klemens_deseni": "-\\d*X[A-Z]*\\d",
+ "klemens_dizi_deseni": "\\d*XD[\\d.]*",
+ "dc24_klemens_deseni": "24XD",
+ "pe_ray": [
+  "WEA1"
+ ],
+ "dis_arayuz": [
+  "-EXT"
+ ],
+ "ac_isaretleri": [
+  "-2TA6",
+  "XD0:N$"
+ ],
+ "pakete_girmeyen_onekler": [
+  "LAPP.",
+  "HELU.",
+  "ICO.",
+  "SIG.",
+  "SEEMI."
+ ],
+ "yer_tutucu_kodlar": [
+  "SEEMI.001",
+  "SIG.001"
+ ],
+ "ek_pano": [
+  "+CP"
+ ]
+}

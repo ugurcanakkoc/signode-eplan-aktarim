@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__BASLIK__</title>
+<style>
+:root{--mur:#17324d;--mur2:#0f4c81;--yazi:#1c2733;--ikinci:#52606d;--cizgi:#d9dfe5;--zemin:#f6f7f8;--beyaz:#fff;--secili:#e6f0f8;--tamam:#1b6e3c}
+*{box-sizing:border-box}html{scroll-padding-top:84px}
+body{margin:0;background:var(--zemin);color:var(--yazi);font:16px/1.5 "Segoe UI",system-ui,sans-serif}
+::selection{background:#bcd7ec}
+header{position:sticky;top:0;z-index:5;background:var(--beyaz);border-bottom:1px solid var(--cizgi)}
+.ust{max-width:980px;margin:auto;padding:12px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+h1{font-size:18px;margin:0;font-weight:600;color:var(--mur)}
+#durum{color:var(--ikinci);font-variant-numeric:tabular-nums}
+.sag{margin-left:auto;display:flex;gap:8px;align-items:center}
+button,.dugme{font:inherit;border-radius:8px;padding:8px 14px;cursor:pointer;border:1px solid var(--cizgi);background:var(--beyaz);color:var(--yazi)}
+button:hover,.dugme:hover{border-color:var(--mur2)}
+button.ana{background:var(--mur2);border-color:var(--mur2);color:#fff;font-weight:600}
+button.ana:hover{background:var(--mur)}
+:focus-visible{outline:3px solid #7fb2dc;outline-offset:2px}
+main{max-width:980px;margin:auto;padding:20px 20px 64px}
+.giris{margin:4px 0 24px;max-width:70ch}
+.soru{background:var(--beyaz);border:1px solid var(--cizgi);border-radius:12px;padding:20px;margin-bottom:16px;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px}
+.soru.bitti{border-color:#9cc9ae}
+h2{font-size:18px;margin:0;font-weight:600;line-height:1.3}
+.kod{color:var(--ikinci);font-size:14px;margin:2px 0 12px}
+.sorun{margin:0 0 12px;font-weight:600}
+.kars{display:grid;grid-template-columns:96px 1fr;gap:4px 12px;margin:0 0 12px}
+.kars dt{color:var(--ikinci)}.kars dd{margin:0;font-family:Consolas,monospace;white-space:pre-wrap}
+.neden{color:var(--ikinci);margin:0 0 14px;font-size:15px}
+fieldset{border:0;margin:0;padding:0}legend{padding:0;font-weight:600;margin-bottom:6px}
+label.sec{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border:1px solid var(--cizgi);border-radius:8px;margin-bottom:6px;cursor:pointer}
+label.sec:hover{border-color:var(--mur2)}
+label.sec:has(input:checked){background:var(--secili);border-color:var(--mur2)}
+label.sec input{margin:4px 0 0;accent-color:var(--mur2)}
+.onerim{color:var(--tamam);font-size:14px;font-weight:600;margin-left:6px;white-space:nowrap}
+.esle{margin:8px 0 2px;display:none;grid-template-columns:90px 20px 1fr;gap:6px 8px;align-items:center;font-family:Consolas,monospace}
+.esle.acik{display:grid}.esle select{font:inherit;padding:5px;border-radius:6px;border:1px solid var(--cizgi);background:#fff}
+figure{margin:0}figure img{width:100%;display:block;border:1px solid var(--cizgi);border-radius:8px;cursor:zoom-in;background:#fff}
+figure.buyuk{position:fixed;inset:0;z-index:9;background:rgba(15,25,35,.75);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+figure.buyuk img{width:auto;max-width:92vw;max-height:84vh;cursor:zoom-out}figure.buyuk figcaption{color:#fff}
+figcaption{font-size:13px;color:var(--ikinci);margin-top:6px}
+details.cih{font-size:14px;color:var(--ikinci);margin-top:10px}summary{cursor:pointer}
+.cih div{font-family:Consolas,monospace;margin-top:4px;line-height:1.6}
+details.bilgi{background:var(--beyaz);border:1px solid var(--cizgi);border-radius:12px;padding:14px 20px;margin-top:24px}
+details.bilgi summary{font-weight:600}details.bilgi ul{margin:10px 0 2px;padding-left:20px}details.bilgi li{margin-bottom:8px}
+#not{color:var(--tamam);font-size:14px}
+@media(max-width:820px){.soru{grid-template-columns:1fr}.sag{margin-left:0}}
+@media(prefers-reduced-motion:no-preference){label.sec{transition:background .12s,border-color .12s}}
+</style></head><body>
+<header><div class="ust"><h1>__BASLIK__</h1><span id="durum"></span>
+<div class="sag"><span id="not" role="status"></span><label class="dugme">Kayıt aç<input id="ac" type="file" accept=".json" hidden></label><button class="ana" id="kaydet">Kaydet</button></div></div></header>
+<main><p class="giris">Her satır için bir seçim yap. Bitirince <b>Kaydet</b>’e bas ve inen dosyayı gönder. Seçimlerin bu tarayıcıda da saklanır. Bu sayfa EPLAN’a yazmaz.</p>
+<div id="liste"></div>
+<details class="bilgi"><summary>Bilgi: karar gerekmeyen kalemler</summary><ul id="bilgi"></ul></details>
+</main>
+<script>
+const S=__VERI__, B=__BILGI__, KEY='__KEY__';
+let D={};try{D=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!==undefined)e.textContent=h;return e};
+function kaydetYerel(){localStorage.setItem(KEY,JSON.stringify(D));durum()}
+function durum(){let n=0;S.forEach(s=>{const b=D[s.id]&&D[s.id].k;document.getElementById(s.id).classList.toggle('bitti',!!b);if(b)n++});
+document.getElementById('durum').textContent=n+' / '+S.length+' karar verildi'}
+const L=document.getElementById('liste');
+S.forEach(s=>{const a=el('section','soru');a.id=s.id;const sol=el('div');
+sol.append(el('h2','',s.baslik),el('p','kod',s.kod+' · '+s.cihazlar.length+' cihaz'),el('p','sorun',s.sorun));
+const dl=el('dl','kars');[['Müşteri P8',s.musteri],['Bizde',s.bizde]].forEach(([x,y])=>dl.append(el('dt','',x),el('dd','',y)));sol.append(dl,el('p','neden',s.neden));
+const f=el('fieldset');f.append(el('legend','','Kararın'));
+s.sec.forEach(o=>{const l=el('label','sec'),r=el('input');r.type='radio';r.name=s.id;r.value=o.k;r.checked=(D[s.id]&&D[s.id].k)===o.k;
+r.onchange=()=>{D[s.id]=Object.assign(D[s.id]||{},{k:o.k});esleGoster();kaydetYerel()};const m=el('span','',o.ad);if(s.oneri===o.k)m.append(el('span','onerim','önerim'));l.append(r,m);f.append(l)});
+let esleGoster=()=>{};
+if(s.esle){const g=el('div','esle');Object.keys(s.esle).forEach(u=>{const q=el('select');q.setAttribute('aria-label',u+' ucu');
+[''].concat(Array.isArray(s.hedef)?s.hedef:s.hedef[u]).forEach(h=>{const o=el('option','',h||'seç');o.value=h;q.append(o)});
+const kay=()=>D[s.id]&&D[s.id].e||null;q.value=(kay()||s.esle)[u]||'';q.onchange=()=>{D[s.id]=D[s.id]||{};D[s.id].e=Object.assign({},s.esle,D[s.id].e||{},{[u]:q.value});kaydetYerel()};
+g.append(el('span','',u),el('span','','→'),q)});f.append(g);esleGoster=()=>g.classList.toggle('acik',(D[s.id]&&D[s.id].k)===s.esle_karar);esleGoster()}
+sol.append(f);const c=el('details','cih');c.append(el('summary','','Cihazları göster'),el('div','',s.cihazlar.join('   ')));sol.append(c);a.append(sol);
+const sag=el('div');if(s.resim){const fg=el('figure'),i=el('img');i.src=s.resim;i.alt=s.baslik+' müşteri çizimi';i.onclick=()=>fg.classList.toggle('buyuk');fg.append(i,el('figcaption','','Müşteri çizimi, PDF sayfa '+s.sayfa+'. Büyütmek için tıkla.'));sag.append(fg)}a.append(sag);L.append(a)});
+const U=document.getElementById('bilgi');B.forEach(([a,b])=>{const li=el('li');li.append(el('b','',a),document.createTextNode(': '+b));U.append(li)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('figure.buyuk').forEach(f=>f.classList.remove('buyuk'))});
+document.getElementById('kaydet').onclick=()=>{const k=S.filter(s=>D[s.id]&&D[s.id].k).map(s=>{const r={tur:s.tur,anahtar:s.anahtar,karar:D[s.id].k};if(D[s.id].k===s.esle_karar)r.esleme=Object.assign({},s.esle,D[s.id].e||{});return r});
+const b=new Blob([JSON.stringify({proje:__PROJE__,tarih:new Date().toISOString(),surum:3,kararlar:k},null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='KULLANICI_KARAR.json';a.click();
+document.getElementById('not').textContent=k.length+' karar indirildi'};
+document.getElementById('ac').onchange=e=>{const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);D={};j.kararlar.forEach(k=>{const s=S.find(x=>x.tur===k.tur&&x.anahtar===k.anahtar);if(s)D[s.id]={k:k.karar,e:k.esleme}});kaydetYerel();location.reload()}catch(x){document.getElementById('not').textContent='Dosya okunamadı: geçerli bir kayıt seç'}};r.readAsText(e.target.files[0])};
+durum();
+</script></body></html>

@@ -1,0 +1,13 @@
+{
+ "musteri": "ornek",
+ "not": "Örnek: output/musteri/<musteri>/profil.json olarak kopyala ve müşteriye göre değiştir. Desenler Python re sözdizimindedir.",
+ "kablo_deseni": "-(\\d+W[A-Z]|W[DG]\\d)",
+ "klemens_deseni": "-\\d*X[A-Z]*\\d",
+ "klemens_dizi_deseni": "\\d*X[A-Z]*[\\d.]*",
+ "dc24_klemens_deseni": "24X",
+ "pe_ray": [],
+ "dis_arayuz": ["-EXT"],
+ "ac_isaretleri": [],
+ "pakete_girmeyen_onekler": ["LAPP.", "HELU."],
+ "yer_tutucu_kodlar": []
+}

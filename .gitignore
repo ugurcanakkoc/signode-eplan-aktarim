@@ -1,0 +1,16 @@
+# Müşteri verisi ve üretilen dosya: asla yüklenmez
+output/
+arsiv/
+signoit*/
+*.zw1
+*.zw9
+*.edz
+*.pdf
+*.xlsx
+*.xls
+*.dll
+*.pdb
+*.png
+__pycache__/
+.pytest_cache/
+.claude/settings.local.json
