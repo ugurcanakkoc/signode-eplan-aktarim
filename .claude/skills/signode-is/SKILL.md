@@ -1,13 +1,14 @@
 ---
 name: signode-is
-description: Signode EPLAN yedeğini (.zw1) UVP ürün kodu, pin ve tel kurallarına çevirir. Kullanıcı /signode-is ve klasör verdiğinde ya da yeni Signode/SNCT/SNBP projesi işlenmek istendiğinde kullan. Prompt istemez.
+description: Signode EPLAN yedeğini (.zw1) UVP ürün kodu, pin ve tel kurallarına çevirir. Kullanıcı yedek, PDF ve Excel dosyası ya da klasör verip aktar dediğinde, /signode-is yazdığında ya da yeni Signode/SNCT/SNBP projesi işlenmek istendiğinde kullan. Prompt istemez.
 ---
 
 # Signode işi
 
-Kullanıcıdan yalnız klasör istenir.
+Kullanıcıdan yalnız dosya ya da klasör istenir.
 
-1. Klasörde bul: `Kundendaten/*.zw1` (ya da kökte tek `*.zw1`), varsa `*_Produktion.pdf`, `is-emri-urun-listesi_*.xlsx`, `*.edz`. İş emri listesi ve EDZ isteğe bağlıdır. İş adı: klasör adı ya da liste adı.
+0. `output/musteri/signode/profil.json` yoksa önce `python -X utf8 kur.py` çalıştır. Eksik varsa yalnız onu söyle.
+1. Verilen dosya ya da klasörde bul: `.zw1` (gerekli, tek), `.pdf`, malzeme listesi `.xlsx` (iş emri, teklif ya da başka biçim, sütun adından okunur), `.edz`. Yalnız `.zw1` zorunludur. Birden çok `.zw1` varsa adında "test" geçmeyeni seç, emin değilsen sor. İş adı: klasör adı ya da liste adındaki iş numarası, yoksa `.zw1` adı.
 2. EPLAN'ın kapalı olduğunu ve `output\ajan_kayit\20261003_troester\EPLAN_KILIT` kilidinin olmadığını doğrula. Açıksa kullanıcıdan kapatmasını iste.
 3. `Workflow` aracını `name: "signode-is"` ve `args: {is, zw1, liste, edz, pdf, pano}` ile çalıştır. Kullanıcının bu komutu vermesi akış onayıdır. Pano verilmezse `+CC`; `+CP` profildeki `ek_pano` ile kapsamdadır.
 4. Pin kuyruğu kapalıysa arka planda başlat: `python -X utf8 tools/yedek_is/pin_kuyruk.py`. Adres: http://127.0.0.1:8766

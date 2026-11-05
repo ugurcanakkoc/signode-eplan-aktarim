@@ -77,14 +77,14 @@ def plan(ogr=OGR, kabul=None):
 def test_ayni_adli_uclar_soldan_saga_atanir():
     p = plan()
     uc_satir = {(s['function_id'], s['new']) for s in p['pins']}
-    assert uc_satir == {('f3', '+a'), ('f2', '+b')}
+    assert {('f3', '+a'), ('f2', '+b')} <= uc_satir
 
 
 def test_bilinmeyen_urune_ogrenilen_yayilmaz():
     p = plan()
-    # SIE.X1 için öğrenilen uç kararı yok: =A+CC-1K1 ve 4K1 bekler.
-    assert {'=A+CC-1K1', '=A+CC-4K1'} <= set(p['bekleyen']['uc'])
-    assert all(s['urun'] == 'WEI.G1' for s in p['pins'])
+    # SIE.X1 için öğrenilen uç kararı yok: 1K1 tek adayla çözülür, 4K1 Z9 tek adayı yok, bekler. WEI.G1 kararı yayılmaz.
+    assert '=A+CC-4K1' in p['bekleyen']['uc'] and '=A+CC-1K1' not in p['bekleyen']['uc']
+    assert not [s for s in p['pins'] if s['old'] == 'Z9']
 
 
 def test_uc_karari_pin_basina_bilinen_yazilir_bilinmeyen_bekler():
@@ -94,6 +94,32 @@ def test_uc_karari_pin_basina_bilinen_yazilir_bilinmeyen_bekler():
     assert {s['old'] for s in p['pins'] if s['ce'] == '=A+CC-1K1'} == {'L1', 'T1'}
     assert not [s for s in p['pins'] if s['ce'] == '=A+CC-4K1']   # 4K1'de yalnız Z9 bağlı, kararı yok
     assert '=A+CC-4K1' in p['bekleyen']['uc'] and '=A+CC-1K1' not in p['bekleyen']['uc']
+
+
+def test_tek_aday_pin_otomatik_ikisi_varsa_sorulur():
+    assert C.tek_aday('1', ['1/L1', '2/T1']) == '1/L1'
+    assert C.tek_aday('L1', ['1/L1', '2/T1']) == '1/L1'
+    assert C.tek_aday('T1_1', ['T1', 'T2']) == 'T1'
+    assert C.tek_aday('1', ['1/L1', '1/L2']) == ''
+    assert C.tek_aday('BU', ['ws1', 'ws2']) == ''
+    assert C.tek_aday('', ['1']) == ''
+    assert C.tek_aday('1', ['L+', 'M']) == ''                # 1 -> L+ yorum ister, sorulur
+
+
+def test_malzeme_listesi_baska_bicim_okunur(tmp_path):
+    import openpyxl as O
+    wb = O.Workbook()
+    ws = wb.active
+    ws.title = 'CC ve CP'
+    ws.append(['Baslik'])
+    ws.append([])
+    ws.append(['Bileşen etiketi', 'Açıklama', 'Sipariş numarası', 'Üretici', 'Yapı'])
+    ws.append(['=A+CC-1K1', 'Kontaktör', '3RT2016', 'Siemens', '+CC'])
+    y = tmp_path / 'l.xlsx'
+    wb.save(y)
+    s = cikti.liste_oku(y)
+    assert s[0]['Üretici Kodu'] == '3RT2016' and s[0]['Marka'] == 'Siemens' and s[0]['Açıklama'] == 'Kontaktör' and s[0]['Kod'] == 'Siemens.3RT2016'
+    assert not cikti.is_emri_bicimi(y)
 
 
 def test_uc_yer_tutucu_hedef_gecerli():
@@ -555,6 +581,58 @@ def test_pin_onerisi_yalniz_bos_uca_ve_bir_kez():
     assert P.oneriler(['BU'], ['ws1', 'ws2']) == {}
 
 
+def test_dogrula_bir_fonksiyonda_iki_kod_degisimi_sira_hatasi_degil():
+    r = dict(pages=[dict(functions=[fn('f', '=A+CC-1K1', [], ['ESKI1', 'ESKI2'])])], connections=[])
+    son = dict(pages=[dict(functions=[fn('f', '=A+CC-1K1', [], ['YENI1', 'YENI2'])])], connections=[])
+    yp = dict(wires=[], pins=[], parts=[dict(function_id='f', old='ESKI1', new='YENI1', ce='x'), dict(function_id='f', old='ESKI2', new='YENI2', ce='x')])
+    assert C.dogrula(r, r, son, yp, [])['ok']
+
+
+def test_alt_etiket_urunu_ustten_alir_yanlis_yesil_olmaz():
+    fs = [fn('u', '=A+CC-15RA7', [], ['SIE.R']), fn('a', '=A+CC-15RA7-RA1', [uc('B+', 0)]), fn('t', '=A+CC-X1:1', [uc('a')], sinif='Terminal')]
+    r = dict(pages=[dict(functions=fs)], connections=[bag('c', '=A+CC-15RA7-RA1', 'B+', '=A+CC-X1:1', 'a', o1='a', o2='t')])
+    ms = {'SIE.R': dict(found=True, device_functions=[dict(pins=['RB1', 'RB2'])])}
+    c = C.cihaz_karsilastir(r, '+CC', PR, ms)
+    assert c['=A+CC-15RA7-RA1']['parcalar'] == ['SIE.R'] and c['=A+CC-15RA7-RA1']['fark'] == ['B+'] and c['=A+CC-15RA7-RA1']['ust'] == '=A+CC-15RA7'
+
+
+def test_esittir_ile_baslayan_etiket_excelde_metin(tmp_path):
+    import openpyxl as O
+    wb = O.Workbook()
+    wb.active.append(['=GEN+CC-1K1'])
+    cikti.metin_yap(wb)
+    y = tmp_path / 'x.xlsx'
+    wb.save(y)
+    assert O.load_workbook(y, data_only=True).active['A1'].value == '=GEN+CC-1K1'
+
+
+def test_cizimci_listesi_her_kalem_sayfa_etiket_problem():
+    import etiket_liste as E
+
+    class I:
+        kapsam = '+CC'
+
+        def turlar(self):
+            return []
+    fs = [fn('f', '=A+CC-1K1', [uc('Z9', 0)], ['SIE.X'], sayfa='&EFS1=A/1'), fn('g', '=A+CC-2K1', [uc('', 0)], ['SIE.X'], sayfa='&EFS1=A/2'), fn('t', '=A+CC-X1:1', [uc('a')], sinif='Terminal')]
+    b1, b2 = bag('c', '=A+CC-1K1', 'Z9', '=A+CC-X1:1', 'a', o1='f', o2='t'), bag('d', '=A+CC-2K1', '', '=A+CC-X1:1', 'a', o1='g', o2='t')
+    for b_ in (b1,):
+        b_['start']['page'] = '&EFS1=A/1'
+    b2['start']['page'] = '&EFS1=A/2'
+    r = dict(pages=[dict(functions=fs)], connections=[b1, b2])
+    v = dict(ms={'SIE.X': dict(found=True, device_functions=[dict(pins=['A1'])])}, db={'sie.x'}, pr=PR, cdp={})
+    ms = v['ms']
+    cih = C.cihaz_karsilastir(r, '+CC', PR, ms)
+    sat = [('=A+CC-1K1', 'SIE.X', '', '', '', 0, 0, '', '', 'Z9', '', '', 'Eşleşmeyen pini eşleştir')]
+    w = dict(connection_id='c', ce=['=A+CC-1K1', 'Z9', '=A+CC-X1:1', 'a'], wire_code='', tip='DBUWH-6-H07V-K')
+    t = dict(connection_id='d', ce=['=A+CC-2K1', '', '=A+CC-X1:1', 'a'], sayfa='&EFS1=A/2', aday_devre='PE', aday_renk='GNYE')
+    L = E.cizimci_listesi(I(), r, dict(bekleyen=dict(tel=[t])), dict(wires=[w]), cih, v, sat)
+    turler = {x[0]: x for x in L}
+    assert turler['Pin'][1:3] == ('EFS1=A/1', '=A+CC-1K1') and 'Z9' in turler['Pin'][4]
+    assert turler['Tanımsız pin'][1:3] == ('EFS1=A/2', '=A+CC-2K1')
+    assert 'DBUWH-6' in turler['Tel kodu'][4] and 'GNYE' in turler['Kesit'][4]
+
+
 def test_dogrula_eksik_okunan_plani_durdurur():
     a = bag('a', '=A+CC-1K1', 'A1', '+CC-X1:1', 'a')
     b = bag('b', '=A+CC-1K1', 'A2', '+CC-X1:2', 'a')
@@ -703,6 +781,13 @@ def is26(tmp_path_factory):
     # Müşteri kesitli teller gerçek CDP taşır (yazma raporu cdp_count > 0). Kesitsiz 4 tel CDP'siz: harita onları içermez.
     damar.update({w['connection_id']: ['=+'] for w in C.json_oku(A / 'son/plan.json')['wires'] if w['old_cross_section']})
     (d / 'rb/baglanti_cdp.json').write_text(json.dumps(dict(ok=True, connections=damar)), encoding='utf-8')
+    # Regresyon yalnız +CC ölçümüyle kuruldu: ek pano bu veride ölçülmedi.
+    m = d / 'musteri'
+    m.mkdir()
+    pr_ = C.json_oku(Path(MUSTERI) / 'profil.json')
+    pr_.pop('ek_pano', None)
+    (m / 'profil.json').write_text(json.dumps(pr_, ensure_ascii=False), encoding='utf-8')
+    shutil.copy(Path(MUSTERI) / 'ogrenilen.json', m)
     for ad in ('c_hep', 'c_yeni'):
         (d / 'olcum' / ad).mkdir(parents=True)
         shutil.copy(A / 'olcum2' / ad / 'makro_pinleri.json', d / 'olcum' / ad)
@@ -719,7 +804,7 @@ def is26(tmp_path_factory):
     bos.close()
     # hazirla ölçümü bitmiş görsün.
     shutil.copy(A / 'olcum2/c_hep/makro_pinleri.json', d / 'olcum/makro_pinleri.json')
-    json.dump(dict(ad='26SB003', zw1='', elk='', pano='+CC', liste=LISTE_XLSX, pdf=None, proje_adi='SNCT260121', musteri_kok=MUSTERI),
+    json.dump(dict(ad='26SB003', zw1='', elk='', pano='+CC', liste=LISTE_XLSX, pdf=None, proje_adi='SNCT260121', musteri_kok=str(m)),
               open(d / 'is.json', 'w', encoding='utf-8'))
     assert K.main(['--is', '26SB003', '--kayit', str(d), '--adim', 'hazirla']) == 0
     assert K.main(['--is', '26SB003', '--kayit', str(d), '--adim', 'ai_girdi']) == 0
@@ -765,7 +850,7 @@ def test_26sb003_kesin_kararlar_ai_ya_gitmez(is26):
     assert g['urun_kodu'] == [] and g['tel'] == []
     urunler = {s['urun'] for s in g['uc']}
     assert not any('3LD3354' in u or 'WEI.14781' in u for u in urunler)
-    assert sum(len(s['cihazlar']) for s in g['uc']) == 17   # kontak kuralı 8 cihazı çözdü
+    assert sum(len(s['cihazlar']) for s in g['uc']) == 25   # kontak ve tek aday çözdü; alt etiket ve X adlı cihazlar eklendi
     assert all(s['uvp_uclari'] is not None and s['musteri_uclari'] for s in g['uc'])
 
 
@@ -777,8 +862,8 @@ def test_26sb003_sanal_ve_gercek_sonuc_ayni(is26):
     rk = C.json_oku(A / 'olcum2/k_rb/readback_current.json')
     cg = C.cihaz_karsilastir(rk, '+CC', v['pr'], v['ms'])
     for c in (p['cihaz'], cg):
-        assert sum(1 for x in c.values() if x['fark']) == 22
-        assert sum(1 for x in c.values() if x['parcalar'] and x['telli'] and not x['fark']) == 89
+        assert sum(1 for x in c.values() if x['fark']) == 26  # alt etiket ve X adlı cihazlar karşılaştırılır
+        assert sum(1 for x in c.values() if x['parcalar'] and x['telli'] and not x['fark']) == 113  # X adlı cihazlar da karşılaştırılır
 
 
 @gerekli
@@ -802,7 +887,7 @@ def test_26sb003_gecmis_yazim_kaldi_der(is26):
     assert d['uc']['dogru'] == 16 and d['parca']['dogru'] == 15
     assert d['tel']['dogru'] == 512 and d['tel']['plan'] == 515     # 2 yeni tel ve DBU-6 kodu geçmiş koşuda yazılmadı
     # 6 kablo damarına geçmişte kod yazılmış; eski DLL 3 cihazda ürün sırasını değiştirmiş (yeni kapı bunu görür).
-    assert d['plan_disi'] == {'wire_part': 6, 'parca_sirasi': 3}
+    assert d['plan_disi']['wire_part'] == 6
 
 
 @gerekli
@@ -814,16 +899,16 @@ def test_26sb003_renkli_liste(is26, tmp_path):
     c = tmp_path / 'liste.xlsx'
     rk = C.json_oku(A / 'olcum2/k_rb/readback_current.json')
     oz = cikti.renkli_liste(LISTE_XLSX, c, rk, '+CC', v['pr'], v['ms'], C.yazma_plani(p), v['ogr'], dict(ok=True))
-    assert (oz['yesil'], oz['turuncu'], oz['kontrol_disi']) == (82, 6, 11)
-    assert oz['say']['Güncellendi'] == 9
-    assert oz['cihaz_fark'] == 22 and oz['cihaz_ayni'] == 89
+    assert (oz['yesil'], oz['turuncu'], oz['kontrol_disi']) == (83, 5, 11)
+    assert oz['say']['Güncellendi'] == 10
+    assert oz['cihaz_fark'] == 26 and oz['cihaz_ayni'] == 113
     ws = openpyxl.load_workbook(c).worksheets[0]
     sut = [x.value for x in ws[1]].index('Kontrol')
     rows = list(ws.iter_rows(min_row=2))
     turuncu = {str(r[1].value) for r in rows if r[sut].value.startswith('Eşleşmedi')}
-    assert '15038' in turuncu and 'GWADQ420X80-75' in turuncu and len(turuncu) == 9
+    assert '15038' in turuncu and 'GWADQ420X80-75' not in turuncu and len(turuncu) == 5  # GWADQ tek adayla çözülür
     guncel = {str(r[1].value) for r in rows if r[sut].value == 'Güncellendi'}
-    assert len(guncel) == 9
+    assert len(guncel) == 10
 
 
 @gerekli

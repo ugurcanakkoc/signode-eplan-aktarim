@@ -4,7 +4,7 @@ Kaynak: kullanıcı kararları, 2026-11-05. Kod: `tools/yedek_is/cekirdek.py`, `
 
 ## Kapsam
 
-- Pano `+CC` ve `+CP`. Ek pano `ek_pano` ile profilde tanımlıdır.
+- Pano `+CC`, `+CP` ve `+CP1`. Ek pano `ek_pano` ile profilde tanımlıdır.
 - Yedekte çalışılır, sıfırdan çizilmez.
 - Klemense müdahale edilmez. Çok damarlı kabloya müdahale edilmez, yalnız tek damarlı tel yazılır.
 - Ürünü olmayan ve müşteri sayfasında ("Kunde") çizili cihazın teli panoda değildir, yazılmaz.
@@ -19,7 +19,7 @@ Kaynak: kullanıcı kararları, 2026-11-05. Kod: `tools/yedek_is/cekirdek.py`, `
 
 - Yalnız bağlı pin karşılaştırılır. Bağlantısız pin sorun değildir.
 - Bağlı pinde her zaman UVP makrosundaki ad kullanılır.
-- Ad aynıysa işlem yok. Ad farklıysa kuyruğa düşer. Karar ürün + müşteri pini anahtarıyla kalıcı tutulur.
+- Ad aynıysa işlem yok. Tek aday varsa otomatik eşlenir: 1→1/L1, L1→1/L1, T1_1→T1. Kalanı kuyruğa düşer. Karar ürün + müşteri pini anahtarıyla kalıcı tutulur.
 - Yardımcı kontak: son rakam işlevdir (1-2 NC, 3-4 NO), ilk rakam sıra numarasıdır. Makro yer tutucu veriyorsa (`.1 .2 .3 .4`) ve işlev adedi yetiyorsa şema numarası korunur, pin eşleşmiş sayılır.
 - Adı boş bağlı uç eşleştirilmez. "Tanımsız bağlantılı ürünler" listesine düşer.
 

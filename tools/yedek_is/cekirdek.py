@@ -379,7 +379,7 @@ def tel_plani(r, pano, pr, std, ogr, is_adi, kabul_tel, cdp_ad, db=(), ms=None, 
                 elif sinif in devre.KESIN and not ac_isareti(c, pr):
                     sec = devre.KESIN[sinif] + ('KURAL: %s (%s)' % (sinif, kanit_ag),)
                 if not sec:
-                    bekleyen.append(dict(connection_id=c['object_id'], ce=ce, renk=col, sayfa=s.get('page'), aday_devre=sinif, kanit_ag=kanit_ag, amper_cihaz=amper,
+                    bekleyen.append(dict(connection_id=c['object_id'], ce=ce, renk=col, sayfa=s.get('page') or e.get('page'), aday_devre=sinif, kanit_ag=kanit_ag, amper_cihaz=amper,
                                          aday_kesit=aday_ks, aday_renk=renk_k or ''))
                     continue
             cs, ucol, kaynak = sec
@@ -484,9 +484,15 @@ def cihaz_karsilastir(r, pano, pr, ms):
     bag = telli_uclar(r)
     cih = {}
     for k, fs in fn.items():
-        if disarida.search(k):
+        if disarida.search(k) and all(f.get('class_name') in ('Terminal', 'Cable', 'Shield') and f.get('category') != 'PLCTerminal' for f in fs):
             continue
         parcalar = sorted({art(a) for f in fs for a in f.get('articles') or []})
+        # Aynı modül iki kez takılıysa iki kontak taşır (garanti denetimi: 24SG4'te 3 adet 1NC).
+        tum_parca = [art(a) for f in fs if f.get('category') != 'ArticlePlacement' for a in f.get('articles') or []]
+        # Alt etiket (-15RA7-RA1) ürünü üst cihazdadır. Üstten alınmazsa bağlı uç karşılaştırılmaz, cihaz yanlış yeşil çıkar (denetim 26SB003).
+        ust = k.rsplit('-', 1)[0]
+        if not parcalar and ust in fn:
+            parcalar = sorted({art(a) for f in fn[ust] for a in f.get('articles') or []})
         uc = {q['name'] for f in fs for q in f.get('pins') or [] if q.get('name')}
         telli = sorted(uc & bag.get(k, set()))
         gercek, sablon, sema = set(), False, False
@@ -496,9 +502,9 @@ def cihaz_karsilastir(r, pano, pr, ms):
             sablon = sablon or any(any(d.get('pins') or []) for d in p.get('device_functions') or [])
             sema = sema or bool(p.get('has_multiline'))
         fark = sorted(set(telli) - gercek)
-        kontak = kontak_kurali(fark, parcalar, ms)
+        kontak = kontak_kurali(fark, tum_parca or parcalar, ms)
         fark = sorted(set(fark) - {x[0] for x in kontak})
-        cih[k] = dict(parcalar=parcalar, telli=telli, fark=fark, uvp=sorted(gercek), sablon=sablon, sema=sema, kontak=kontak)
+        cih[k] = dict(parcalar=parcalar, telli=telli, fark=fark, uvp=sorted(gercek), sablon=sablon, sema=sema, kontak=kontak, ust=ust if ust in fn else '')
     return cih
 
 
@@ -523,6 +529,18 @@ def sanal_uygula(r, plan):
 
 def _uc_hedef(h):
     return [h] if isinstance(h, str) else list(h)
+
+
+def tek_aday(uc, bos):
+    """Müşteri ucunun tek karşılığı: 1 -> 1/L1, L1 -> 1/L1, T1_1 -> T1. Birden çok aday ya da yorum gerekirse boş döner."""
+    if not uc:
+        return ''
+    if re.fullmatch(r'\d+', uc):
+        ad = [h for h in bos if h.startswith(uc + '/')]
+    else:
+        kok = re.sub(r'_\d+$', '', uc)
+        ad = [h for h in bos if h == kok or h.endswith('/' + uc)] if kok != uc or '/' not in uc else []
+    return ad[0] if len(ad) == 1 else ''
 
 
 def uc_plani(r, pano, pr, ms, kararlar):
@@ -550,6 +568,14 @@ def uc_plani(r, pano, pr, ms, kararlar):
                 esleme.update(kar.get('esleme') or {})
                 kaynak = kar.get('kaynak', '')
         makro = set(c['uvp']) | {q for u in c['parcalar'] for d in (ms.get(u) or {}).get('device_functions') or [] for q in d.get('pins') or []}
+        # Kullanıcı 05.11: makro adı kullanılır. Tek aday varsa yorum yoktur, sorulmaz.
+        bos_uc = sorted(set(c['uvp']) - set(c['telli']))
+        for u in sorted(set(c['fark']) - set(esleme) - kalsin, key=lambda x: (len(x), x)):
+            h = tek_aday(u, bos_uc)
+            if h:
+                esleme[u] = h
+                bos_uc.remove(h)
+                kaynak = kaynak or 'KURAL: tek aday'
         cozuldu = set(c['fark']) & kalsin
         for musteri in sorted((set(c['fark']) & set(esleme)) - kalsin):
             h = _uc_hedef(esleme[musteri])
@@ -916,9 +942,12 @@ def dogrula(r0, taban, r1, yp, raporlar):
                 plan_disi[alan] += 1
     F0 = {f['object_id']: f for f in fonksiyonlar(taban)}
     # Sıra da korunur: müşteri listesi sırası değişmez (denetim 26SB002: 17/79495/0).
+    degisim = collections.defaultdict(dict)    # Bir fonksiyonda birden çok kod değişebilir (26SB003).
     for p in yp.get('parts', []):
-        f, g = F0.get(p['function_id']), F1.get(p['function_id'])
-        if f and g and [p['new'] if art(a).lower() == p['old'].lower() else art(a) for a in f.get('articles') or []] != [art(a) for a in g.get('articles') or []]:
+        degisim[p['function_id']][p['old'].lower()] = p['new']
+    for fid, d in degisim.items():
+        f, g = F0.get(fid), F1.get(fid)
+        if f and g and [d.get(art(a).lower(), art(a)) for a in f.get('articles') or []] != [art(a) for a in g.get('articles') or []]:
             plan_disi['parca_sirasi'] += 1
     for fid, f in F0.items():
         g = F1.get(fid)

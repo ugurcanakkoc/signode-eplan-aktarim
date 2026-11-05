@@ -12,6 +12,7 @@ import argparse
 import datetime as dt
 import json
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -27,7 +28,7 @@ KOK = Path(__file__).resolve().parents[2]
 STANDART = KOK / 'arsiv' / 'standartlar' / 'UVP Standartları  V1.xlsx'
 PARCA_DB = Path(r'C:\Users\Public\EPLAN\Data\Ürünler\Company name\EPLAN_parts.adb\Article.eod')
 DEFTER = KOK / 'output' / 'musteri' / 'signode' / 'hata_defteri.json'
-ADIMLAR = ['hazirla', 'ai_girdi', 'ai_karar_al', 'uygula', 'dogrula', 'rapor', 'karar_uygula', 'olcum', 'yedek']
+ADIMLAR = ['hazirla', 'ai_girdi', 'ai_karar_al', 'uygula', 'dogrula', 'rapor', 'karar_uygula', 'olcum', 'yedek', 'teslim']
 
 
 def yaz_json(yol, veri):
@@ -415,7 +416,53 @@ def adim_yedek(i):
     y = i.yol('yedek.json')
     y.unlink(missing_ok=True)
     eplan.calistir([dict(action='UvpPdfToP8Yedek', result=str(y), params=dict(PROJECT=str(i.elk), OUT=str(y)))], i.kayit, 'yedek_' + dt.datetime.now().strftime('%m%d%H%M'))
-    return 'Yedek: %s' % C.json_oku(y)['yedek']
+    zw1 = Path(C.json_oku(y)['yedek'])
+    t = i.yol('TESLIM')
+    t.mkdir(exist_ok=True)
+    shutil.copy(zw1, t / ('%s_%s_UVP.zw1' % (i.ad, i.bilgi['proje_adi'])))
+    et = i.yol('ETIKET_KONTROL_%s.xlsx' % i.ad)
+    if et.exists():
+        shutil.copy(et, t)
+    return 'Yedek ve Excel: %s' % t
+
+
+def adim_teslim(i):
+    """Çizimciye gönderilecek zip: yedek, Excel, kısa not. Doğrulama geçmeden üretilmez."""
+    import collections
+    import zipfile
+
+    import openpyxl
+    d = i._oku('dogrulama.json') or {}
+    if not d.get('ok'):
+        raise Dur('Doğrulama geçmeden teslim paketi üretilmez.')
+    t = i.yol('TESLIM')
+    zw1 = t / ('%s_%s_UVP.zw1' % (i.ad, i.bilgi['proje_adi']))
+    et = i.yol('ETIKET_KONTROL_%s.xlsx' % i.ad)
+    if not (zw1.exists() and et.exists()):
+        raise Dur('Önce --adim rapor ve --adim yedek çalıştır.')
+    wb = openpyxl.load_workbook(et, read_only=True, data_only=True)
+    say = collections.Counter(r[0] for r in wb['Çizimci Listesi'].iter_rows(min_row=2, values_only=True) if r[0])
+    durum = collections.Counter(r[11] for r in wb['Etiket Kontrol'].iter_rows(min_row=2, values_only=True) if r[0])
+    ka = sum(1 for r in wb['Klemens Arası'].iter_rows(min_row=2, values_only=True) if r[0])
+    wb.close()
+    b = d.get('baglanti') or {}
+    satir = ['%s %s' % (i.ad, i.bilgi['proje_adi']), '',
+             'Dosyalar', '- %s: EPLAN yedeği. Programın yaptığı değişiklikler içinde.' % zw1.name, '- %s: kontrol ve yapılacaklar.' % et.name, '',
+             'Sıra', '1. Ürün kodu: Çizimci Listesi, Tür = Ürün kodu ve Makro.', '2. Pin: Çizimci Listesi, Tür = Pin ve Tanımsız pin.', '3. Klemens: program klemense dokunmadı. Klemens Arası sayfasına bak.', '4. Kesit: klemens yaparken kontrol et. Çizimci Listesi, Tür = Kesit ve Tel kodu.', '',
+             'Excel renkleri', '- Yeşil: ürün kodu ve pin adı kontrol edildi. Tel ve kesit bu kontrole dahil değil.', '- Koyu turuncu: çizimci bakacak.', '- Gri: kapsam dışı.', '',
+             'Sayılar', '- Kontrol edildi: %d. Çizimci bakacak: %d.' % (durum['Kontrol edildi'], durum['Çizimci bakacak'])]
+    satir += ['- %s: %d' % (k, say[k]) for k in ('Ürün kodu', 'Makro', 'Pin', 'Tanımsız pin', 'Tel kodu', 'Kesit') if say[k]]
+    satir += ['- Klemens arası bağ: %d' % ka, '- Yazılan: %d tel, %d pin, %d ürün kodu. Bağlantı farkı: %s eksik, %s fazla.' % ((d.get('tel') or {}).get('plan', 0), (d.get('uc') or {}).get('plan', 0), (d.get('parca') or {}).get('plan', 0), b.get('eksik'), b.get('fazla'))]
+    hedef = KOK / 'output' / 'teslim' / ('%s_%s.zip' % (i.ad, i.bilgi['proje_adi']))
+    hedef.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(hedef, 'w', zipfile.ZIP_DEFLATED) as z:
+        z.write(zw1, zw1.name, compress_type=zipfile.ZIP_STORED)
+        z.write(et, et.name)
+        z.writestr('OKU_BENI.txt', (chr(13) + chr(10)).join(satir).encode('utf-8-sig'))
+    with zipfile.ZipFile(hedef) as z:
+        if z.testzip() is not None:
+            raise Dur('Zip bozuk: %s' % hedef)
+    return 'Teslim paketi: %s' % hedef
 
 
 def _ogrenilen_satirlar(p):
@@ -445,7 +492,7 @@ def adim_rapor(i):
         gorunen = C.yazma_plani(p)
         dog = dog or dict(ok=False, neden=['doğrulama yapılmadı'])
     eksik = C.eksik_kablolar(gorunen['wires'])
-    oz = cikti.renkli_liste(i.bilgi['liste'], i.yol('IS_EMRI_KONTROL.xlsx'), r_son, i.kapsam, v['pr'], v['ms'], gorunen, v['ogr'], dog, eksik) if i.bilgi.get('liste') else None
+    oz = cikti.renkli_liste(i.bilgi['liste'], i.yol('IS_EMRI_KONTROL.xlsx'), r_son, i.kapsam, v['pr'], v['ms'], gorunen, v['ogr'], dog, eksik) if i.bilgi.get('liste') and cikti.is_emri_bicimi(i.bilgi['liste']) else None
     g = girdi_uret(i, kabul)
     S = cikti.sorular(g, v['liste'], v['ms'], kabul, i.pdf())
     bilgi = [[k, 'Müşteride ürün kodu yok. Karşılaştırılacak ürün yok.'] for k, c in sorted(p['cihaz'].items()) if c['fark'] and not c['parcalar']]

@@ -31,13 +31,18 @@ python -X utf8 kur.py
 
 ## Kullanım
 
-EPLAN'ı kapat. Claude Code'da depo klasörünü aç ve proje klasörünü ver:
+EPLAN'ı kapat. Claude Code'da bu klasörü aç ve dosyaları söyle:
 
 ```
-/signode-is C:\yol\26SB005
+Bu Signode yedeği: C:\yol\SNCT260200.zw1
+Bu PDF'i: C:\yol\SNCT260200_Produktion.pdf
+Bu malzeme listesi: C:\yol\liste.xlsx
+Aktar.
 ```
 
-Klasörde `Kundendaten\*.zw1` olmalı. `*_Produktion.pdf`, `is-emri-urun-listesi_*.xlsx` ve `.edz` varsa kullanılır.
+Yalnız `.zw1` zorunludur. Malzeme listesi iş emri, teklif ya da başka biçimde olabilir, sütun adından okunur. Klasör de verebilirsin: `/signode-is C:\yol\26SB005`.
+
+Sonuç `output\ajan_kayit\<tarih>_<iş>\TESLIM\` klasörüne gelir: çizimciye verilecek `.zw1` ve Excel.
 
 Claude olmadan aynı akış:
 
@@ -75,8 +80,9 @@ Makro ya da ürün eklediysen önce `--adim olcum`. Çizimciye verilecek yedek i
 
 | Dosya | İçerik |
 |---|---|
-| `ETIKET_KONTROL_<iş>.xlsx` | Etiket, ürün kodu, makro, pin durumu ve yapılacaklar |
+| `ETIKET_KONTROL_<iş>.xlsx` | Yapılacaklar, Çizimci Listesi (sayfa, etiket, ürün kodu, problem), Etiket Kontrol, Klemens Arası, Teller |
 | `dogrulama.json` | Bağlantı farkı ve yazılan satır kontrolü |
+| `output\teslim\<iş>_<proje>.zip` | Çizimciye gönderilecek paket: yedek, Excel, OKU_BENI.txt (`--adim teslim`) |
 | `denetim.md` | Bağımsız denetçi raporu |
 
 Yeşil yalnız ürün kodu ve pin adı kontrolüdür. Tel ve kesit bu kontrole dahil değildir.

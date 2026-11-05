@@ -2,7 +2,7 @@
 
 Kullanıcıya Türkçe, kısa ve net yaz. Tablo kullan, iç içe açıklama yazma.
 
-Bu depo tek iş yapar: Signode EPLAN yedeğini UVP standardına çevirmek. Önce [README.md](README.md) ve [KURALLAR.md](KURALLAR.md) oku. Yeni proje gelince `signode-is` becerisini kullan.
+Bu depo tek iş yapar: Signode EPLAN yedeğini UVP standardına çevirmek. Önce [README.md](README.md) ve [KURALLAR.md](KURALLAR.md) oku. Kullanıcı yedek, PDF ya da Excel verip aktar dediğinde `signode-is` becerisini kullan. Ek soru sorma, eksik varsa yalnız onu söyle.
 
 ## Değişmez kurallar
 

@@ -22,15 +22,61 @@ ELLE = dict(k='ELLE', ad='Ben EPLAN’da elle yapacağım')
 BEKLE = dict(k='MAKRO_BEKLE', ad='Ürün ve makro gelince tekrar bak')
 
 
+LISTE_ESANLAM = {'Üretici Kodu': ('Üretici Kodu', 'Sipariş numarası', 'Tip / Model', 'Bestellnummer', 'Artikelnummer', 'Order number', 'Part number'),
+                 'Marka': ('Marka', 'Üretici', 'Hersteller', 'Manufacturer'), 'Açıklama': ('Açıklama', 'Malzeme açıklaması', 'Beschreibung', 'Description'), 'Pano': ('Pano', 'Yapı'), 'Kod': ('Kod',)}
+
+
 def liste_oku(xlsx):
-    """İş emri listesi: başlık adlarıyla satırlar. Sütun adları kullanıcının listesinden."""
+    """Malzeme listesi: iş emri ya da başka biçim. Başlık satırı ve sütun adı aranır, kaynak değişmez. Dönüş: ortak adlarla satırlar.
+
+    Birden çok sayfa varsa en çok satırlı değil, başlığı tutan ilk uygun sayfa okunur. Bulunamazsa boş liste: kod yalnız parça DB ile karşılaştırılır.
+    """
     wb = openpyxl.load_workbook(xlsx, read_only=True, data_only=True)
-    ws = wb.worksheets[0]
-    satirlar = ws.iter_rows(values_only=True)
-    bas = [str(x or '').strip() for x in next(satirlar)]
-    sonuc = [{b: ('' if v is None else str(v)) for b, v in zip(bas, s)} for s in satirlar if any(s)]
-    wb.close()
-    return sonuc
+    try:
+        sayfalar = sorted(wb.worksheets, key=lambda w: 'CC' not in w.title)
+        for ws in sayfalar:
+            sat = list(ws.iter_rows(values_only=True, max_row=5000))
+            for n, s in enumerate(sat[:15]):
+                bas = [str(x or '').strip() for x in s]
+                kod_sutun = [i for i, b in enumerate(bas) if b in LISTE_ESANLAM['Üretici Kodu']]
+                if not kod_sutun:
+                    continue
+                ad = {b: b for b in bas}
+                for ortak, es in LISTE_ESANLAM.items():
+                    for x in es:
+                        if x in bas:
+                            ad[x] = ortak
+                            break
+                sonuc = []
+                for v in sat[n + 1:]:
+                    if not any(v):
+                        continue
+                    d = {ad.get(b, b): ('' if x is None else str(x)) for b, x in zip(bas, v) if b}
+                    d.setdefault('Kod', '%s.%s' % (d.get('Marka', ''), d.get('Üretici Kodu', '')))
+                    if d.get('Üretici Kodu'):
+                        sonuc.append(d)
+                return sonuc
+        return []
+    finally:
+        wb.close()
+
+
+def metin_yap(wb):
+    """'=' ile başlayan etiket formül sanılır, Excel'de boş ya da hata görünür (denetim 26SB003). Hücre metin olarak kalır."""
+    for ws in wb.worksheets:
+        for sat in ws.iter_rows():
+            for c in sat:
+                if c.data_type == 'f':
+                    c.data_type = 's'
+
+
+def is_emri_bicimi(xlsx):
+    """Renkli iş emri kopyası yalnız kendi biçiminde üretilir: ilk satır başlık, Kod sütunu var."""
+    wb = openpyxl.load_workbook(xlsx, read_only=True, data_only=True)
+    try:
+        return 'Kod' in [str(x or '').strip() for x in next(wb.worksheets[0].iter_rows(values_only=True))]
+    finally:
+        wb.close()
 
 
 def _uc_sorumlusu_degil(ogr):
@@ -143,6 +189,7 @@ def renkli_liste(giris, cikis, r, pano, pr, ms, plan, ogr, dogrulama, eksik=()):
             ws.cell(row=1, column=i).fill = PatternFill('solid', fgColor='C00000')
         ws.freeze_panes = 'C3'
         ws.sheet_properties.tabColor = 'C00000'
+    metin_yap(wb)
     wb.save(cikis)
     return dict(say=dict(say), yesil=sum(v for k, v in say.items() if k.startswith(('Aynı', 'Güncellendi'))),
                 turuncu=sum(v for k, v in say.items() if k.startswith('Eşleşmedi')), kontrol_disi=say['P8 pano içinde yok'],
